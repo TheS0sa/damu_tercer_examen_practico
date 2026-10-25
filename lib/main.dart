@@ -1,8 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/app_controller.dart';
 
 void main() {
@@ -82,7 +81,7 @@ class _SimpsonsExplorerAppState extends State<SimpsonsExplorerApp> {
           ),
         ),
       ),
-      home: CatalogHomeScreen(controller: _controller),
+      home: LoginScreen(controller: _controller),
     );
   }
 }

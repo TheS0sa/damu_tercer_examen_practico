@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../models/simpsons_character.dart';
@@ -14,17 +12,21 @@ class SimpsonsAppController extends ChangeNotifier {
   final SimpsonsApi _api;
   final FavoritesStore _favoritesStore;
   List<SimpsonsCharacter> _characters = const [];
+  List<SimpsonsCharacter> _allCharacters = const [];
   Map<int, SimpsonsCharacter> _favorites = {};
   int _currentPage = 1;
   int _pageCount = 1;
   bool _hasPrevious = false;
   bool _hasNext = false;
   bool _isLoading = true;
+  bool _isSearchingAll = false;
+  bool _allLoaded = false;
   bool _favoritesLoaded = false;
   String? _catalogError;
   String? _favoritesError;
 
   List<SimpsonsCharacter> get characters => _characters;
+  List<SimpsonsCharacter> get allCharacters => _allCharacters;
   List<SimpsonsCharacter> get favorites =>
       _favorites.values.toList(growable: false)
         ..sort((first, second) => first.name.compareTo(second.name));
@@ -33,6 +35,8 @@ class SimpsonsAppController extends ChangeNotifier {
   bool get hasPrevious => _hasPrevious;
   bool get hasNext => _hasNext;
   bool get isLoading => _isLoading;
+  bool get isSearchingAll => _isSearchingAll;
+  bool get allLoaded => _allLoaded;
   bool get favoritesLoaded => _favoritesLoaded;
   String? get catalogError => _catalogError;
   String? get favoritesError => _favoritesError;
@@ -61,6 +65,7 @@ class SimpsonsAppController extends ChangeNotifier {
     _isLoading = true;
     _catalogError = null;
     notifyListeners();
+
     try {
       final result = await _api.fetchCharacters(page);
       _characters = result.characters;
@@ -81,10 +86,58 @@ class SimpsonsAppController extends ChangeNotifier {
     }
   }
 
+  
+  Future<void> ensureAllCharactersLoaded() async {
+    if (_allLoaded || _isSearchingAll) return;
+
+    _isSearchingAll = true;
+    notifyListeners();
+
+    try {
+      final total = _pageCount > 1 ? _pageCount : 60;
+      final Map<int, SimpsonsCharacter> collected = {
+        for (final c in _characters) c.id: c,
+      };
+
+      const int batchSize = 10;
+      for (int start = 1; start <= total; start += batchSize) {
+        final int end = (start + batchSize - 1 < total)
+            ? start + batchSize - 1
+            : total;
+
+        final futures = <Future<CharacterPage>>[];
+        for (int p = start; p <= end; p++) {
+          if (p == _currentPage && _characters.isNotEmpty) continue;
+          futures.add(_api.fetchCharacters(p));
+        }
+
+        final pages = await Future.wait(futures);
+        for (final pageResult in pages) {
+          for (final character in pageResult.characters) {
+            collected[character.id] = character;
+          }
+        }
+      }
+
+      final fullList = collected.values.toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
+      _allCharacters = fullList;
+      _allLoaded = true;
+    } catch (_) {
+      
+      if (_allCharacters.isEmpty) {
+        _allCharacters = _characters;
+      }
+    } finally {
+      _isSearchingAll = false;
+      notifyListeners();
+    }
+  }
+
   Future<SimpsonsCharacter> fetchCharacter(int id) => _api.fetchCharacter(id);
 
   Future<bool> toggleFavorite(SimpsonsCharacter character) async {
-    if (!_favoritesLoaded || _favoritesError != null) return false;
+    if (!_favoritesLoaded && _favoritesError != null) return false;
 
     final updated = Map<int, SimpsonsCharacter>.from(_favorites);
     if (updated.containsKey(character.id)) {

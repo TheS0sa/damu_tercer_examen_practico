@@ -1,51 +1,26 @@
-# Springfield Archive
+# Archivo de Springfield - Tercer Examen Práctico
 
-Aplicación Flutter para explorar personajes de **Los Simpson** con datos reales
-de [The Simpsons API](https://thesimpsonsapi.com/). La interfaz usa una estética
-editorial retro, con colores inspirados en Springfield y un diseño distinto al
-proyecto de referencia.
+Esta aplicación móvil fue desarrollada en Flutter para la materia de Desarrollo de Aplicaciones Móviles. El objetivo del proyecto es conectarse a la API pública de Los Simpson para consultar su catálogo de personajes, ver la información de cada uno y guardar una lista de favoritos en el dispositivo.
 
-## Funcionalidades
+## Integrantes del equipo
 
-- Catálogo consultado por HTTPS con paginación desde la API.
-- Búsqueda local por nombre dentro de la página cargada.
-- Ficha con imagen, estado, ocupación, género, edad, fecha de nacimiento y una
-  frase cuando esos datos están disponibles.
-- Favoritos que se pueden agregar o quitar y que se conservan localmente entre
-  ejecuciones mediante `SharedPreferences`.
-- Indicadores de carga, estados vacíos, mensajes comprensibles de error y
-  opción para reintentar.
-- Sustituto visual si no se puede cargar una imagen remota.
+- **Jeferson Isac Umaña**
+- **Brayant Steven Sosa**
 
-## Tecnologías y API
+**Docente:** Ing. Eduardo Vásquez
 
-- Flutter y Dart.
-- Paquete `http` para solicitudes GET.
-- Paquete `shared_preferences` para persistir favoritos.
-- Catálogo: `https://thesimpsonsapi.com/api/characters?page=1`
-- Detalle: `https://thesimpsonsapi.com/api/characters/{id}`
-- Imágenes: `https://cdn.thesimpsonsapi.com/500` + `portrait_path`
-- Documentación: [thesimpsonsapi.com](https://thesimpsonsapi.com/)
+## ¿Qué hace la aplicación?
 
-No requiere servidor propio ni base de datos: la evaluación solicita guardar
-localmente los favoritos y no requiere una API propia.
+1. **Inicio de sesión (Login):** Antes de entrar al catálogo, la app pide iniciar sesión validando que los campos no estén vacíos y comprobando las credenciales del usuario (`admin` / `1234`). También incluye un botón en la pantalla principal para cerrar sesión.
+2. **Catálogo con paginación:** Al entrar, se descarga la primera página de personajes desde la API mostrando su foto, nombre, edad, estado y ocupación. Abajo tiene los botones de "Anterior" y "Siguiente" para moverse entre las 60 páginas disponibles.
+3. **Buscador global por nombre:** Permite escribir el nombre de cualquier personaje en la barra de búsqueda y lo busca en todas las páginas del catálogo, sin importar si está en la página 1 o en la última.
+4. **Ficha de detalle:** Al tocar un personaje, se abre otra pantalla con su imagen más grande y más datos como su edad, género, fecha de nacimiento y frases conocidas.
+5. **Favoritos guardados:** Se pueden marcar o quitar personajes como favoritos tocando el ícono de guardado. Estos favoritos se guardan en la memoria local con `SharedPreferences` para que no se pierdan al cerrar y volver a abrir la aplicación.
+6. **Manejo de errores y carga:** Muestra animaciones mientras carga la información, avisa cuando una búsqueda no tiene resultados y muestra un botón para reintentar si se va el internet.
 
-## Ejecutar
+## Herramientas utilizadas
 
-Desde esta carpeta:
-
-```powershell
-flutter pub get
-flutter run
-```
-
-Validación:
-
-```powershell
-flutter analyze
-flutter test
-```
-
-## Integrantes
-
-- Completar con los nombres de los integrantes del equipo.
+- **Flutter y Dart** para toda la interfaz y lógica.
+- Paquete **`http`** para conectarse a `https://thesimpsonsapi.com/`.
+- Paquete **`shared_preferences`** para guardar la lista de favoritos en el dispositivo.
+- **`ChangeNotifier`** para actualizar la pantalla cuando cambian las páginas o los favoritos.

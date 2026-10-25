@@ -5,6 +5,7 @@ import '../services/app_controller.dart';
 import '../widgets/character_image.dart';
 import '../widgets/favorite_toggle.dart';
 import 'character_detail_screen.dart';
+import 'login_screen.dart';
 
 class CatalogHomeScreen extends StatefulWidget {
   const CatalogHomeScreen({super.key, required this.controller});
@@ -24,6 +25,14 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    final trimmed = value.trim();
+    setState(() => _query = trimmed);
+    if (trimmed.isNotEmpty) {
+      widget.controller.ensureAllCharactersLoaded();
+    }
   }
 
   @override
@@ -52,18 +61,19 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'SPRINGFIELD ARCHIVE',
+                  'ARCHIVO DE SPRINGFIELD',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.1,
                   ),
                 ),
+                SizedBox(height: 2),
                 Text(
                   'Un catálogo muy animado',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF777268),
+                    color: Color(0xFF77726B),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -71,6 +81,27 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => LoginScreen(controller: widget.controller),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: const Text('Cerrar sesión'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFE7653B),
+                side: const BorderSide(color: Color(0xFFE9E0D0)),
+                backgroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
@@ -97,7 +128,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
                         _selectedTab == 0 ? _buildCatalog() : _buildFavorites(),
                   ),
                 ),
-                if (_selectedTab == 0) _buildPagination(),
+                if (_selectedTab == 0 && _query.isEmpty) _buildPagination(),
               ],
             ),
           ),
@@ -127,17 +158,26 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
   }
 
   Widget _buildSearch() => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
-    child: TextField(
-      controller: _searchController,
-      onChanged: (value) => setState(() => _query = value.trim()),
-      textInputAction: TextInputAction.search,
-      decoration: const InputDecoration(
-        hintText: 'Busca un personaje...',
-        prefixIcon: Icon(Icons.search_rounded),
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+        child: TextField(
+          controller: _searchController,
+          onChanged: _onSearchChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Busca un personaje en todo el catálogo...',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _query.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      _searchController.clear();
+                      _onSearchChanged('');
+                    },
+                  )
+                : null,
+          ),
+        ),
+      );
 
   Widget _buildCatalog() {
     final controller = widget.controller;
@@ -146,6 +186,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
         child: CircularProgressIndicator(color: Color(0xFFE7653B)),
       );
     }
+
     if (controller.catalogError != null) {
       return _MessagePanel(
         icon: Icons.wifi_off_rounded,
@@ -156,19 +197,47 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
       );
     }
 
+    // Si el usuario está buscando y aún se están descargando todas las páginas
+    if (_query.isNotEmpty && controller.isSearchingAll) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFFE7653B)),
+            SizedBox(height: 14),
+            Text(
+              'Buscando en todas las páginas de Springfield...',
+              style: TextStyle(
+                color: Color(0xFF77726B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final normalizedQuery = _query.toLowerCase();
-    final results = controller.characters
-        .where(
-          (character) => character.name.toLowerCase().contains(normalizedQuery),
-        )
-        .toList(growable: false);
+    final sourceList = _query.isNotEmpty && controller.allLoaded
+        ? controller.allCharacters
+        : controller.characters;
+
+    final results = _query.isEmpty
+        ? sourceList
+        : sourceList
+              .where(
+                (character) =>
+                    character.name.toLowerCase().contains(normalizedQuery),
+              )
+              .toList(growable: false);
+
     if (results.isEmpty) {
       return _MessagePanel(
         icon: _query.isEmpty ? Icons.movie_creation_outlined : Icons.search_off,
         title: _query.isEmpty ? 'Esta página está vacía' : 'Sin coincidencias',
         message: _query.isEmpty
             ? 'Prueba otra página para descubrir más personajes.'
-            : 'No encontramos ese nombre en la página ${controller.currentPage}. La búsqueda solo revisa la página cargada.',
+            : 'No encontramos ningún personaje con "$_query" en todo el catálogo.',
       );
     }
 
@@ -192,15 +261,17 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
         onAction: controller.loadFavorites,
       );
     }
+
     if (!controller.favoritesLoaded) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFFE7653B)),
       );
     }
+
     if (controller.favorites.isEmpty) {
       return const _MessagePanel(
         icon: Icons.bookmark_border_rounded,
-        title: 'Tu colección está esperando',
+        title: '¡Tu colección está esperando!',
         message:
             'Guarda personajes desde el catálogo y aparecerán aquí, incluso cuando vuelvas a abrir la app.',
       );
@@ -237,7 +308,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
                 'Página ${controller.currentPage} de ${controller.pageCount}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF777268),
+                  color: Color(0xFF77726B),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -268,45 +339,45 @@ class _ArchiveBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: const Color(0xFF29283E),
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          isFavorites ? 'TU COLECCIÓN' : 'ARCHIVO DE SPRINGFIELD',
-          style: const TextStyle(
-            color: Color(0xFFFFD86A),
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-          ),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF29283E),
+          borderRadius: BorderRadius.circular(24),
         ),
-        const SizedBox(height: 7),
-        Text(
-          isFavorites
-              ? '$favoriteCount personajes guardados'
-              : 'Historias en cada esquina.',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isFavorites ? 'TU COLECCIÓN' : 'ARCHIVO DE SPRINGFIELD',
+              style: const TextStyle(
+                color: Color(0xFFFFD86A),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              isFavorites
+                  ? '$favoriteCount personaje/s guardado/s'
+                  : 'Historias en cada esquina.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isFavorites
+                  ? 'Tus elegidos, siempre a mano.'
+                  : 'Conoce a los habitantes de la ciudad.',
+              style: const TextStyle(color: Color(0xFFD7D4E1), fontSize: 13),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          isFavorites
-              ? 'Tus elegidos, siempre a mano.'
-              : 'Conoce a los habitantes de la ciudad.',
-          style: const TextStyle(color: Color(0xFFD7D4E1), fontSize: 13),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class CharacterCard extends StatelessWidget {
@@ -321,64 +392,64 @@ class CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CharacterDetailScreen(
-            character: character,
-            controller: controller,
-          ),
-        ),
-      ),
-      child: SizedBox(
-        height: 132,
-        child: Row(
-          children: [
-            SizedBox(
-              width: 104,
-              height: double.infinity,
-              child: CharacterImage(imageUrl: character.portraitUrl),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      character.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF25243A),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    _StatusBadge(status: character.status),
-                    const SizedBox(height: 7),
-                    Text(
-                      character.occupation ?? 'Ocupación desconocida',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF777268),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => CharacterDetailScreen(
+                character: character,
+                controller: controller,
               ),
             ),
-            FavoriteToggle(character: character, controller: controller),
-          ],
+          ),
+          child: SizedBox(
+            height: 132,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 104,
+                  height: double.infinity,
+                  child: CharacterImage(imageUrl: character.portraitUrl),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          character.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF25243A),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        _StatusBadge(status: character.status),
+                        const SizedBox(height: 7),
+                        Text(
+                          character.occupation ?? 'Ocupación desconocida',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF77726B),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                FavoriteToggle(character: character, controller: controller),
+              ],
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class _StatusBadge extends StatelessWidget {
@@ -388,20 +459,20 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-    decoration: BoxDecoration(
-      color: const Color(0xFFE4F2E9),
-      borderRadius: BorderRadius.circular(30),
-    ),
-    child: Text(
-      status,
-      style: const TextStyle(
-        color: Color(0xFF38775D),
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE4F2E9),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          status,
+          style: const TextStyle(
+            color: Color(0xFF38775D),
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
 }
 
 class _MessagePanel extends StatelessWidget {
@@ -421,38 +492,38 @@ class _MessagePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: const Color(0xFFE7653B)),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF25243A),
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48, color: const Color(0xFFE7653B)),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF25243A),
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF77726B), height: 1.45),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF777268), height: 1.45),
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onAction,
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(actionLabel!),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
