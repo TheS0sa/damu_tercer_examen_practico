@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/app_controller.dart';
@@ -16,12 +18,14 @@ class SimpsonsExplorerApp extends StatefulWidget {
 }
 
 class _SimpsonsExplorerAppState extends State<SimpsonsExplorerApp> {
+  // Controlador principal para manejar datos y favoritos
   late final SimpsonsAppController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = SimpsonsAppController();
+    // Carga favoritos y primera página al arrancar la app
     unawaited(_controller.initialize());
   }
 
@@ -39,13 +43,14 @@ class _SimpsonsExplorerAppState extends State<SimpsonsExplorerApp> {
     return MaterialApp(
       title: 'Springfield Archive',
       debugShowCheckedModeBanner: false,
+      // Colores y estilos generales de la app
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: paper,
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFE7653B),
           primary: const Color(0xFFE7653B),
-          secondary: const Color(0xFF4B8F83),
+          secondary: const Color(0xFF4B8FB3),
           surface: paper,
           onSurface: ink,
         ),
@@ -81,6 +86,7 @@ class _SimpsonsExplorerAppState extends State<SimpsonsExplorerApp> {
           ),
         ),
       ),
+      // Inicia en la pantalla de login
       home: LoginScreen(controller: _controller),
     );
   }

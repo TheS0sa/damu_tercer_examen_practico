@@ -4,6 +4,7 @@ import '../models/simpsons_character.dart';
 import 'favorites_store.dart';
 import 'simpsons_api.dart';
 
+// Controlador que maneja el estado del catálogo, paginación y favoritos
 class SimpsonsAppController extends ChangeNotifier {
   SimpsonsAppController({SimpsonsApi? api, FavoritesStore? favoritesStore})
     : _api = api ?? SimpsonsApi(),
@@ -27,6 +28,7 @@ class SimpsonsAppController extends ChangeNotifier {
 
   List<SimpsonsCharacter> get characters => _characters;
   List<SimpsonsCharacter> get allCharacters => _allCharacters;
+  // Devuelve los favoritos ordenados por nombre
   List<SimpsonsCharacter> get favorites =>
       _favorites.values.toList(growable: false)
         ..sort((first, second) => first.name.compareTo(second.name));
@@ -43,11 +45,13 @@ class SimpsonsAppController extends ChangeNotifier {
 
   bool isFavorite(int id) => _favorites.containsKey(id);
 
+  // Carga los favoritos guardados y la página 1 al iniciar
   Future<void> initialize() async {
     await loadFavorites();
     await loadPage(1);
   }
 
+  // Lee los favoritos desde SharedPreferences
   Future<void> loadFavorites() async {
     try {
       final saved = await _favoritesStore.read();
@@ -61,6 +65,7 @@ class SimpsonsAppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Pide una página específica a la API y actualiza la pantalla
   Future<void> loadPage(int page) async {
     _isLoading = true;
     _catalogError = null;
@@ -86,7 +91,7 @@ class SimpsonsAppController extends ChangeNotifier {
     }
   }
 
-  
+  // Descarga todas las páginas en bloques de 10 para el buscador global
   Future<void> ensureAllCharactersLoaded() async {
     if (_allLoaded || _isSearchingAll) return;
 
@@ -124,7 +129,6 @@ class SimpsonsAppController extends ChangeNotifier {
       _allCharacters = fullList;
       _allLoaded = true;
     } catch (_) {
-      
       if (_allCharacters.isEmpty) {
         _allCharacters = _characters;
       }
@@ -136,6 +140,7 @@ class SimpsonsAppController extends ChangeNotifier {
 
   Future<SimpsonsCharacter> fetchCharacter(int id) => _api.fetchCharacter(id);
 
+  // Agrega o quita un personaje de favoritos y guarda el cambio localmente
   Future<bool> toggleFavorite(SimpsonsCharacter character) async {
     if (!_favoritesLoaded && _favoritesError != null) return false;
 

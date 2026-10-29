@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/simpsons_character.dart';
 
+// Excepción personalizada para mostrar errores amigables en pantalla
 class SimpsonsApiException implements Exception {
   const SimpsonsApiException(this.message);
 
@@ -15,6 +16,7 @@ class SimpsonsApiException implements Exception {
   String toString() => message;
 }
 
+// Agrupa los personajes de una página junto con los datos de paginación
 class CharacterPage {
   const CharacterPage({
     required this.characters,
@@ -37,6 +39,7 @@ class SimpsonsApi {
   static const _host = 'thesimpsonsapi.com';
   final http.Client _client;
 
+  // Consulta la lista de personajes según el número de página
   Future<CharacterPage> fetchCharacters(int page) async {
     final uri = Uri.https(_host, '/api/characters', {'page': '$page'});
     final json = await _getJson(uri);
@@ -47,6 +50,7 @@ class SimpsonsApi {
       );
     }
 
+    // Convierte cada elemento del JSON en un objeto SimpsonsCharacter
     final characters = rawResults
         .whereType<Map>()
         .map(
@@ -64,12 +68,14 @@ class SimpsonsApi {
     );
   }
 
+  // Consulta el detalle de un solo personaje por su ID
   Future<SimpsonsCharacter> fetchCharacter(int id) async {
     final uri = Uri.https(_host, '/api/characters/$id');
     final json = await _getJson(uri);
     return SimpsonsCharacter.fromJson(json);
   }
 
+  // Realiza la petición GET y controla errores de red o tiempo de espera
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     late final http.Response response;
     try {
@@ -104,11 +110,13 @@ class SimpsonsApi {
         'La API devolvió una respuesta que no se pudo leer.',
       );
     }
+
     if (decoded is! Map) {
       throw const SimpsonsApiException(
         'La API devolvió una respuesta que no se pudo leer.',
       );
     }
+
     return Map<String, dynamic>.from(decoded);
   }
 

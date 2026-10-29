@@ -16,6 +16,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Llave para validar el formulario y controladores de texto
   final _formKey = GlobalKey<FormState>();
   final _userController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  // Usuario y clave fijos para entrar
   static const String _validUser = 'admin';
   static const String _validPass = '1234';
 
@@ -33,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Revisa que los datos sean correctos antes de pasar al catálogo
   void _handleLogin() {
     setState(() {
       _errorMessage = null;
@@ -46,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final pass = _passwordController.text.trim();
 
     if (user == _validUser && pass == _validPass) {
+      // Si coincide, abre el catálogo y quita el login del historial
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => CatalogHomeScreen(controller: widget.controller),
@@ -76,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Logo y título superior
                   Row(
                     children: [
                       Container(
@@ -119,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+                  // Tarjeta de bienvenida
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -158,6 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  // Formulario de usuario y contraseña
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(22),
@@ -198,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 labelText: 'Contraseña',
                                 hintText: 'Ingresa tu contraseña',
                                 prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                // Botón para mostrar u ocultar la clave
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -218,6 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return null;
                               },
                             ),
+                            // Muestra alerta si las credenciales fallan
                             if (_errorMessage != null) ...[
                               const SizedBox(height: 14),
                               Container(

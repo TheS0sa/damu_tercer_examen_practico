@@ -18,7 +18,7 @@ class CatalogHomeScreen extends StatefulWidget {
 
 class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
   final _searchController = TextEditingController();
-  int _selectedTab = 0;
+  int _selectedTab = 0; // 0 = Catálogo, 1 = Favoritos
   String _query = '';
 
   @override
@@ -27,6 +27,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
     super.dispose();
   }
 
+  // Actualiza el texto de búsqueda y carga todas las páginas si hace falta
   void _onSearchChanged(String value) {
     final trimmed = value.trim();
     setState(() => _query = trimmed);
@@ -82,6 +83,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
           ],
         ),
         actions: [
+          // Botón para cerrar sesión y regresar al login
           Padding(
             padding: const EdgeInsets.only(right: 20),
             child: OutlinedButton.icon(
@@ -120,6 +122,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
                     ),
                   ),
                 ),
+                // Solo muestra el buscador en la pestaña de catálogo
                 if (_selectedTab == 0) _buildSearch(),
                 Expanded(
                   child: AnimatedBuilder(
@@ -128,12 +131,14 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
                         _selectedTab == 0 ? _buildCatalog() : _buildFavorites(),
                   ),
                 ),
+                // Oculta la paginación mientras se está buscando un personaje
                 if (_selectedTab == 0 && _query.isEmpty) _buildPagination(),
               ],
             ),
           ),
         ),
       ),
+      // Barra inferior para cambiar entre Catálogo y Favoritos
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedTab,
         onDestinationSelected: (index) {
@@ -157,6 +162,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
     );
   }
 
+  // Caja de texto para buscar personajes por nombre
   Widget _buildSearch() => Padding(
         padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
         child: TextField(
@@ -179,6 +185,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
         ),
       );
 
+  // Construye la lista del catálogo y maneja estados de carga o error
   Widget _buildCatalog() {
     final controller = widget.controller;
     if (controller.isLoading) {
@@ -197,7 +204,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
       );
     }
 
-    // Si el usuario está buscando y aún se están descargando todas las páginas
+    // Espera mientras descarga todas las páginas para el buscador global
     if (_query.isNotEmpty && controller.isSearchingAll) {
       return const Center(
         child: Column(
@@ -217,6 +224,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
       );
     }
 
+    // Filtra sin importar mayúsculas o minúsculas
     final normalizedQuery = _query.toLowerCase();
     final sourceList = _query.isNotEmpty && controller.allLoaded
         ? controller.allCharacters
@@ -250,6 +258,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
     );
   }
 
+  // Muestra la lista de personajes guardados en favoritos
   Widget _buildFavorites() {
     final controller = widget.controller;
     if (controller.favoritesError != null) {
@@ -288,6 +297,7 @@ class _CatalogHomeScreenState extends State<CatalogHomeScreen> {
     );
   }
 
+  // Botones Anterior y Siguiente para cambiar de página
   Widget _buildPagination() {
     final controller = widget.controller;
     return AnimatedBuilder(
@@ -380,6 +390,7 @@ class _ArchiveBanner extends StatelessWidget {
       );
 }
 
+// Tarjeta individual de cada personaje en la lista
 class CharacterCard extends StatelessWidget {
   const CharacterCard({
     super.key,
@@ -394,6 +405,7 @@ class CharacterCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          // Al tocar la tarjeta abre la pantalla de detalle
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (context) => CharacterDetailScreen(
@@ -475,6 +487,7 @@ class _StatusBadge extends StatelessWidget {
       );
 }
 
+// Panel reutilizable para mostrar mensajes de vacío o errores de red
 class _MessagePanel extends StatelessWidget {
   const _MessagePanel({
     required this.icon,
